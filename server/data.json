@@ -1,0 +1,25 @@
+{
+  "rates": {
+    "gold": 10000,
+    "silver": 92,
+    "oldSilver": 85
+  },
+  "storeDetails": {
+    "ownerName": "ADITHYA E",
+    "contactNo": "+916369250355",
+    "address": "ARANTHANGI"
+  },
+  "hostPassword": "admin123",
+  "hostPhone": "+916369250355",
+  "ornaments": [
+    {
+      "id": 1790764127999,
+      "name": "murugar statue in gold",
+      "type": "gold",
+      "weightGrams": 1200,
+      "makingCharges": 2,
+      "imageUrl": "http://localhost:3000/uploads/1790764127965-489653679.png"
+    }
+  ],
+  "orders": []
+}
