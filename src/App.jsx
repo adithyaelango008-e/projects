@@ -154,29 +154,10 @@ function App() {
 
 // Host Authentication Wrapper
 function HostAuthGuard({ isAuthenticated, setIsAuthenticated, children }) {
-  // 'login' | 'forgot' | 'otp' | 'reset'
-  const [screen, setScreen] = useState('login');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [devOtp, setDevOtp] = useState(''); // shown only when Twilio not configured
 
-  const resetFlow = () => {
-    setScreen('login');
-    setPassword('');
-    setOtp('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setError('');
-    setInfo('');
-    setDevOtp('');
-  };
-
-  // ── Login ─────────────────────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -199,218 +180,31 @@ function HostAuthGuard({ isAuthenticated, setIsAuthenticated, children }) {
     setLoading(false);
   };
 
-  // ── Send OTP ──────────────────────────────────────────────────────────────
-  const handleSendOtp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setInfo('');
-    try {
-      const res = await fetch('http://localhost:3000/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setInfo(data.message);
-        if (data.devOtp) setDevOtp(data.devOtp); // show in UI if Twilio not set up
-        setScreen('otp');
-      } else {
-        setError(data.message);
-      }
-    } catch {
-      setError('Failed to send OTP. Check server connection.');
-    }
-    setLoading(false);
-  };
-
-  // ── Verify OTP ────────────────────────────────────────────────────────────
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('http://localhost:3000/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ otp })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setInfo('OTP verified! Set your new password below.');
-        setScreen('reset');
-      } else {
-        setError(data.message);
-      }
-    } catch {
-      setError('Failed to verify OTP.');
-    }
-    setLoading(false);
-  };
-
-  // ── Reset Password ────────────────────────────────────────────────────────
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('http://localhost:3000/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setInfo('✅ ' + data.message);
-        setTimeout(() => resetFlow(), 2000);
-      } else {
-        setError(data.message);
-      }
-    } catch {
-      setError('Failed to reset password.');
-    }
-    setLoading(false);
-  };
-
   if (isAuthenticated) return children;
 
   return (
     <div className="card login-container">
-      {/* ── LOGIN SCREEN ── */}
-      {screen === 'login' && (
-        <>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔐</div>
-          <h2>Host Access Required</h2>
-          <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
-            Enter your host password to manage the dashboard.
-          </p>
-          {error && <div className="error-message">{error}</div>}
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <input
-                type="password"
-                className="form-input"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="btn" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-          </form>
-          <button
-            onClick={() => { setScreen('forgot'); setError(''); setInfo(''); }}
-            style={{ marginTop: '1.25rem', background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.95rem', textDecoration: 'underline' }}
-          >
-            Forgot Password?
-          </button>
-        </>
-      )}
-
-      {/* ── FORGOT — SEND OTP SCREEN ── */}
-      {screen === 'forgot' && (
-        <>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📱</div>
-          <h2>Reset Password</h2>
-          <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
-            An OTP will be sent to the registered host phone number saved in Store Info.
-          </p>
-          {error && <div className="error-message">{error}</div>}
-          {info && <div className="success-message">{info}</div>}
-          <form onSubmit={handleSendOtp}>
-            <button type="submit" className="btn" disabled={loading}>
-              {loading ? 'Sending OTP...' : 'Send OTP to My Phone'}
-            </button>
-          </form>
-          <button onClick={resetFlow} style={{ marginTop: '1rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem' }}>
-            ← Back to Login
-          </button>
-        </>
-      )}
-
-      {/* ── OTP VERIFICATION SCREEN ── */}
-      {screen === 'otp' && (
-        <>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔢</div>
-          <h2>Enter OTP</h2>
-          {info && <div className="success-message" style={{ marginBottom: '1rem' }}>{info}</div>}
-          {devOtp && (
-            <div style={{ padding: '0.75rem', background: 'rgba(229,193,88,0.08)', border: '1px dashed var(--primary-color)', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--primary-color)' }}>
-              ⚙️ <strong>Dev Mode OTP:</strong> <span style={{ fontSize: '1.2rem', letterSpacing: '0.15em' }}>{devOtp}</span>
-              <br/><span style={{ color: 'var(--text-muted)' }}>Configure Twilio in .env to send real SMS</span>
-            </div>
-          )}
-          {error && <div className="error-message">{error}</div>}
-          <form onSubmit={handleVerifyOtp}>
-            <div className="form-group">
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Enter 6-digit OTP"
-                maxLength={6}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                style={{ letterSpacing: '0.3em', fontSize: '1.4rem', textAlign: 'center' }}
-                required
-              />
-            </div>
-            <button type="submit" className="btn" disabled={loading || otp.length !== 6}>
-              {loading ? 'Verifying...' : 'Verify OTP'}
-            </button>
-          </form>
-          <button
-            onClick={() => { setScreen('forgot'); setError(''); setInfo(''); setDevOtp(''); setOtp(''); }}
-            style={{ marginTop: '1rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem' }}
-          >
-            Resend OTP
-          </button>
-        </>
-      )}
-
-      {/* ── NEW PASSWORD SCREEN ── */}
-      {screen === 'reset' && (
-        <>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔑</div>
-          <h2>Set New Password</h2>
-          {info && <div className="success-message" style={{ marginBottom: '1rem' }}>{info}</div>}
-          {error && <div className="error-message">{error}</div>}
-          <form onSubmit={handleResetPassword}>
-            <div className="form-group">
-              <input
-                type="password"
-                className="form-input"
-                placeholder="New Password (min 6 characters)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <input
-                type="password"
-                className="form-input"
-                placeholder="Confirm New Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="btn" disabled={loading}>
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </form>
-        </>
-      )}
+      <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔐</div>
+      <h2>Host Access Required</h2>
+      <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
+        Enter your host password to manage the dashboard.
+      </p>
+      {error && <div className="error-message">{error}</div>}
+      <form onSubmit={handleLogin}>
+        <div className="form-group">
+          <input
+            type="password"
+            className="form-input"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <button type="submit" className="btn" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
+      </form>
     </div>
   );
 }
@@ -421,11 +215,18 @@ function HostDashboard({ rates, storeDetails, ornaments, onUpdateRates, onUpdate
   const [goldRate, setGoldRate] = useState(rates.gold);
   const [silverRate, setSilverRate] = useState(rates.silver);
   const [oldSilverRate, setOldSilverRate] = useState(rates.oldSilver);
-  
+
   // Store Details state
   const [ownerName, setOwnerName] = useState(storeDetails?.ownerName || '');
   const [contactNo, setContactNo] = useState(storeDetails?.contactNo || '');
   const [address, setAddress] = useState(storeDetails?.address || '');
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   // Ornament state
   const [newOrgName, setNewOrgName] = useState('');
@@ -451,6 +252,43 @@ function HostDashboard({ rates, storeDetails, ornaments, onUpdateRates, onUpdate
     });
     setRateSuccess(true);
     setTimeout(() => setRateSuccess(false), 3000);
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      setPasswordSuccess('');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters long.');
+      setPasswordSuccess('');
+      return;
+    }
+
+    try {
+      const res = await fetch('http://localhost:3000/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setPasswordError(data.message || 'Failed to update password.');
+        setPasswordSuccess('');
+        return;
+      }
+
+      setPasswordSuccess('Password updated successfully.');
+      setPasswordError('');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch {
+      setPasswordError('Could not update password. Please try again.');
+      setPasswordSuccess('');
+    }
   };
 
   const handleUpdateStore = (e) => {
@@ -520,6 +358,45 @@ function HostDashboard({ rates, storeDetails, ornaments, onUpdateRates, onUpdate
         <button onClick={onLogout} className="btn btn-secondary" style={{ width: 'auto', marginTop: 0, padding: '0.5rem 1rem' }}>
           Logout
         </button>
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <h2>Change Host Password</h2>
+        {passwordError && <div className="error-message">{passwordError}</div>}
+        {passwordSuccess && <div className="success-message">{passwordSuccess}</div>}
+        <form onSubmit={handleChangePassword}>
+          <div className="form-group">
+            <label>Current Password</label>
+            <input
+              type="password"
+              className="form-input"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>New Password</label>
+            <input
+              type="password"
+              className="form-input"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Confirm New Password</label>
+            <input
+              type="password"
+              className="form-input"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="btn">Update Password</button>
+        </form>
       </div>
 
       <div className="dashboard-grid">

@@ -13,32 +13,6 @@ const UPLOADS_DIR = path.join(__dirname, 'uploads');
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
-// ─── Twilio Setup ────────────────────────────────────────────────────────────
-let twilioClient = null;
-const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
-
-const twilioConfigured =
-  TWILIO_SID && !TWILIO_SID.startsWith('AC' + 'xxx') &&
-  TWILIO_TOKEN && TWILIO_TOKEN !== 'your_auth_token_here';
-
-if (twilioConfigured) {
-  const twilio = require('twilio');
-  twilioClient = twilio(TWILIO_SID, TWILIO_TOKEN);
-  console.log('✅ Twilio SMS enabled');
-} else {
-  console.log('⚠️  Twilio not configured — OTPs will be printed to console');
-}
-
-// ─── In-Memory OTP Store ─────────────────────────────────────────────────────
-// { phone: { otp, expiresAt, verified } }
-const otpStore = {};
-
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
 // ─── Multer Setup ─────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
@@ -96,7 +70,6 @@ app.post('/api/rates', (req, res) => {
 app.post('/api/store', (req, res) => {
   const data = readData();
   data.storeDetails = { ...data.storeDetails, ...req.body };
-  // Save host phone separately for OTP
   if (req.body.contactNo) data.hostPhone = req.body.contactNo;
   writeData(data);
   res.json({ message: 'Store details updated', storeDetails: data.storeDetails });
@@ -133,7 +106,26 @@ app.post('/api/orders', (req, res) => {
   res.json({ message: 'Order placed', order });
 });
 
-// ─── Password & OTP Routes ────────────────────────────────────────────────────
+// ─── Password Routes ─────────────────────────────────────────────────────────
+
+function updatePassword(req, res) {
+  const { currentPassword, newPassword } = req.body;
+  const data = readData();
+  const hostPassword = data.hostPassword || 'admin123';
+
+  if (!currentPassword || currentPassword !== hostPassword) {
+    return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+  }
+
+  data.hostPassword = newPassword;
+  writeData(data);
+  console.log('🔑 Host password updated successfully.');
+  return res.json({ success: true, message: 'Password updated successfully! You can now login with your new password.' });
+}
 
 // Verify current password (login)
 app.post('/api/auth/login', (req, res) => {
@@ -147,90 +139,9 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
-// Send OTP to host phone
-app.post('/api/auth/send-otp', async (req, res) => {
-  const data = readData();
-  const hostPhone = data.hostPhone || data.storeDetails?.contactNo || '';
-
-  if (!hostPhone) {
-    return res.status(400).json({
-      success: false,
-      message: 'No host phone number found. Please update your Store Info in the dashboard first.'
-    });
-  }
-
-  const otp = generateOTP();
-  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-
-  otpStore[hostPhone] = { otp, expiresAt, verified: false };
-
-  const message = `SOFIYA JEWELLERS: Your password reset OTP is ${otp}. Valid for 5 minutes. Do not share with anyone.`;
-
-  if (twilioClient) {
-    try {
-      await twilioClient.messages.create({
-        body: message,
-        from: TWILIO_FROM,
-        to: hostPhone
-      });
-      console.log(`📱 OTP sent to ${hostPhone}`);
-      res.json({ success: true, message: `OTP sent to your registered number ending in ${hostPhone.slice(-3)}` });
-    } catch (err) {
-      console.error('Twilio error:', err.message);
-      res.status(500).json({ success: false, message: 'Failed to send OTP via SMS. Check Twilio config.' });
-    }
-  } else {
-    // Fallback: print OTP to server console
-    console.log('\n══════════════════════════════════════');
-    console.log(`📲 [DEV MODE] OTP for ${hostPhone}: ${otp}`);
-    console.log('══════════════════════════════════════\n');
-    res.json({
-      success: true,
-      message: 'OTP generated. Check the server console (SMS not configured yet).',
-      devOtp: otp  // Only in dev mode — remove this in production after Twilio is set up
-    });
-  }
-});
-
-// Verify OTP
-app.post('/api/auth/verify-otp', (req, res) => {
-  const { otp } = req.body;
-  const data = readData();
-  const hostPhone = data.hostPhone || data.storeDetails?.contactNo || '';
-  const record = otpStore[hostPhone];
-
-  if (!record) return res.status(400).json({ success: false, message: 'No OTP requested. Please request one first.' });
-  if (Date.now() > record.expiresAt) {
-    delete otpStore[hostPhone];
-    return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
-  }
-  if (record.otp !== otp) return res.status(400).json({ success: false, message: 'Incorrect OTP. Please try again.' });
-
-  // Mark as verified so reset-password can proceed
-  otpStore[hostPhone].verified = true;
-  res.json({ success: true, message: 'OTP verified successfully.' });
-});
-
-// Reset password (only after OTP verified)
-app.post('/api/auth/reset-password', (req, res) => {
-  const { newPassword } = req.body;
-  const data = readData();
-  const hostPhone = data.hostPhone || data.storeDetails?.contactNo || '';
-  const record = otpStore[hostPhone];
-
-  if (!record || !record.verified) {
-    return res.status(403).json({ success: false, message: 'Please verify your OTP first.' });
-  }
-  if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
-  }
-
-  data.hostPassword = newPassword;
-  writeData(data);
-  delete otpStore[hostPhone];
-  console.log('🔑 Host password reset successfully.');
-  res.json({ success: true, message: 'Password reset successfully! You can now login.' });
-});
+// Update the host password directly without OTP verification
+app.post('/api/auth/reset-password', updatePassword);
+app.post('/api/auth/change-password', updatePassword);
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

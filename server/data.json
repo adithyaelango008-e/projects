@@ -9,16 +9,16 @@
     "contactNo": "+916369250355",
     "address": "ARANTHANGI"
   },
-  "hostPassword": "admin123",
+  "hostPassword": "12345678",
   "hostPhone": "+916369250355",
   "ornaments": [
     {
-      "id": 1790764127999,
-      "name": "murugar statue in gold",
-      "type": "gold",
-      "weightGrams": 1200,
-      "makingCharges": 2,
-      "imageUrl": "http://localhost:3000/uploads/1790764127965-489653679.png"
+      "id": 1791267362023,
+      "name": "adithya",
+      "type": "silver",
+      "weightGrams": 1,
+      "makingCharges": 0.1,
+      "imageUrl": "http://localhost:3000/uploads/1791267361985-878631571.png"
     }
   ],
   "orders": []
