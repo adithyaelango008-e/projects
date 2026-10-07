@@ -142,19 +142,12 @@ app.post('/api/auth/login', (req, res) => {
 // Update the host password directly without OTP verification
 app.post('/api/auth/reset-password', updatePassword);
 app.post('/api/auth/change-password', updatePassword);
-// Serve static frontend files from root
-app.use(express.static(path.join(__dirname, '..')));
-// Serve static frontend files from root
-app.use(express.static(path.join(__dirname, '..')));
+// Serve static frontend files from Vite build output
+app.use(express.static(path.join(__dirname, '../dist')));
 
-// Explicitly send index.html on root /
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
-});
-
-// Send index.html page for any other GET request
+// Send index.html from dist for any frontend route
 app.get('{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
