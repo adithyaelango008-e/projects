@@ -77,7 +77,7 @@ app.post('/api/store', (req, res) => {
 
 app.post('/api/upload', upload.single('photo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  res.json({ imageUrl: `http://localhost:${PORT}/uploads/${req.file.filename}` });
+res.json({ imageUrl: `/uploads/${req.file.filename}` });
 });
 
 app.post('/api/ornaments', (req, res) => {
