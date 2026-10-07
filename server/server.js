@@ -144,11 +144,11 @@ app.post('/api/auth/reset-password', updatePassword);
 app.post('/api/auth/change-password', updatePassword);
 // Serve static frontend files from root
 app.use(express.static(path.join(__dirname, '..')));
-
-// Send index.html page for any request
-app.get('*', (req, res) => {
+// Send index.html page for any other GET request
+app.get('{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
+
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
