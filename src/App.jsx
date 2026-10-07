@@ -268,7 +268,7 @@ function HostDashboard({ rates, storeDetails, ornaments, onUpdateRates, onUpdate
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/auth/reset-password', {
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword })
@@ -319,7 +319,7 @@ function HostDashboard({ rates, storeDetails, ornaments, onUpdateRates, onUpdate
       const formData = new FormData();
       formData.append('photo', newOrgImageFile);
       try {
-        const res = await fetch('http://localhost:3000/api/upload', {
+        const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         });
