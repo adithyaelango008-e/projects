@@ -143,6 +143,13 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/reset-password', updatePassword);
 app.post('/api/auth/change-password', updatePassword);
 
+// Serve frontend build files
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Send the index.html page for any request
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+});
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at http://localhost:${PORT}`);
