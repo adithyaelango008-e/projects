@@ -6,7 +6,7 @@ const path = require('path');
 const multer = require('multer');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
@@ -144,12 +144,18 @@ app.post('/api/auth/reset-password', updatePassword);
 app.post('/api/auth/change-password', updatePassword);
 // Serve static frontend files from root
 app.use(express.static(path.join(__dirname, '..')));
+// Serve static frontend files from root
+app.use(express.static(path.join(__dirname, '..')));
+
+// Explicitly send index.html on root /
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
+});
+
 // Send index.html page for any other GET request
 app.get('{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
-
-
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at http://localhost:${PORT}`);
