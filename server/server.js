@@ -142,14 +142,14 @@ app.post('/api/auth/login', (req, res) => {
 // Update the host password directly without OTP verification
 app.post('/api/auth/reset-password', updatePassword);
 app.post('/api/auth/change-password', updatePassword);
+// Serve static frontend files from root
+app.use(express.static(path.join(__dirname, '..')));
 
-// Serve frontend build files
-app.use(express.static(path.join(__dirname, '../client/dist')));
-
-// Send the index.html page for any request
+// Send index.html page for any request
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+  res.sendFile(path.join(__dirname, '../index.html'));
 });
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at http://localhost:${PORT}`);
