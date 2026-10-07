@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './index.css';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 
 function App() {
   const [activeTab, setActiveTab] = useState('customer');
@@ -163,7 +163,7 @@ function HostAuthGuard({ isAuthenticated, setIsAuthenticated, children }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:3000/api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
